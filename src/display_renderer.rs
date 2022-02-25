@@ -20,14 +20,14 @@ fn initialize_frame_matrix(width: usize, height: usize) -> Vec<char> {
 }
 
 impl DisplayRenderer {
-    pub fn print_frame(&mut self, snake : &Snake) {
+    pub fn next_frame(&mut self, snake : &Snake) {
         self.clear_frame();
         self.write_walls();
         self.write_snake(snake);
-        self.print_matrix();
+        self.print_frame();
     }
 
-    fn print_matrix(&self) {
+    fn print_frame(&self) {
         for i in 0..self.height {
             let mut line = String::with_capacity(self.width);
             for j in 0..self.width {
