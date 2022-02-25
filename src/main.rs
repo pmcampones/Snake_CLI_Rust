@@ -1,10 +1,14 @@
+use crate::snake::Snake;
+
 mod snake;
-mod displayRenderer;
+mod display_renderer;
+
+
 
 fn main() {
     println!("Hello, world!");
-    let snake = snake::new((3,1));
+    let snake: Snake = snake::new((20, 1));
     println!("{:#?}", snake);
-    let dr = displayRenderer::new(200, 50);
-    dr.print_frame();
+    let mut dr = display_renderer::new(200, 50);
+    dr.print_frame(&snake);
 }
