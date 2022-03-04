@@ -153,6 +153,10 @@ impl Snake {
         self.head.collect_node(&mut ret);
         ret
     }
+
+    pub fn get_pos(&self) -> (isize, isize) {
+        self.head.node.pos
+    }
 }
 
 impl Printable for SnakeHead {

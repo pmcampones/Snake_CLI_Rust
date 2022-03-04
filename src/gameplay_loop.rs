@@ -12,6 +12,9 @@ pub(crate) fn play(mut snake : Snake, mut renderer: DisplayRenderer, rx : Receiv
     loop {
         //Command::new("clear").spawn().unwrap();
         let displacement = compute_displacement(&rx, &mut prev_displacement);
+        if !renderer.is_in_wall(snake.get_pos()) {
+            panic!("Stop hitting the wall asshole!!")
+        }
         snake.mv(displacement);
         renderer.next_frame(&snake);
         thread::sleep(FRAME_INTERVAL_MILIS);

@@ -73,4 +73,11 @@ impl DisplayRenderer {
         }
         top_bot
     }
+
+    pub fn is_in_wall(&self, pos: (isize, isize)) -> bool {
+        pos.0 > 0
+        && pos.0 < (self.width - 1) as isize
+        && pos.1 > 0
+        && pos.1 < (self.height - 1) as isize
+    }
 }
