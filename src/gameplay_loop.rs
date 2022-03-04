@@ -5,7 +5,7 @@ use crate::display_renderer::DisplayRenderer;
 use crate::Snake;
 use crate::snake::Movable;
 
-const FRAME_INTERVAL_MILIS : Duration = time::Duration::from_millis(1000);
+const FRAME_INTERVAL_MILIS : Duration = time::Duration::from_millis(100);
 
 pub(crate) fn play(mut snake : Snake, mut renderer: DisplayRenderer, rx : Receiver<char>) {
     let mut prev_displacement = (1, 0);

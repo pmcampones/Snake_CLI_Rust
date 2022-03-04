@@ -70,11 +70,14 @@ trait Printable {
     fn collect_node<'a>(& 'a self, vec : & mut Vec<& 'a SnakeNode>);
 }
 
-trait Body: Dragable + Printable {}
+trait Body: Dragable + Printable {
+
+    fn update_sprite(& mut self, update: char);
+
+}
 
 impl Movable for Snake {
     fn mv(&mut self, displacement: (isize, isize)) {
-        println!("{:?}", displacement);
         self.head.mv(displacement)
     }
 }
@@ -90,17 +93,19 @@ impl Movable for SnakeHead {
 
 impl Dragable for SnakeTorso {
     fn drag(&mut self, target: (isize, isize)) {
-        let _displacement = tuple_diff(target, self.node.pos);
+        let displacement = tuple_diff(target, self.node.pos);
         let prev_pos = self.node.pos;
         self.node.pos = target;
+        (self as &mut dyn Body).adapt_shape(displacement);
         self.prev.drag(prev_pos);
     }
 }
 
 impl Dragable for SnakeTail {
     fn drag(&mut self, target: (isize, isize)) {
-        let _displacement = tuple_diff(target, self.node.pos);
+        let displacement = tuple_diff(target, self.node.pos);
         self.node.pos = target;
+        (self as &mut dyn Body).adapt_shape(displacement);
     }
 }
 
@@ -118,6 +123,19 @@ impl Polymorphic for SnakeHead {
             _ => panic!("Impossible displacement. Snake does not move in diagonal."),
         };
         self.node.sprite = updated_sprite;
+    }
+}
+
+impl Polymorphic for dyn Body {
+    fn adapt_shape(&mut self, displacement: (isize, isize)) {
+        let update = if displacement.0 != 0 {
+            H_BODY
+        } else if displacement.1 != 0 {
+            V_BODY
+        } else {
+            panic!("Invalid displacement")
+        };
+        self.update_sprite(update)
     }
 }
 
@@ -157,5 +175,13 @@ impl Printable for SnakeTail {
     }
 }
 
-impl Body for SnakeTorso {}
-impl Body for SnakeTail {}
+impl Body for SnakeTorso {
+    fn update_sprite(& mut self, update: char) {
+        self.node.sprite = update;
+    }
+}
+impl Body for SnakeTail {
+    fn update_sprite(&mut self, update: char) {
+        self.node.sprite = update;
+    }
+}
