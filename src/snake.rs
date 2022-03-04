@@ -74,6 +74,7 @@ trait Body: Dragable + Printable {}
 
 impl Movable for Snake {
     fn mv(&mut self, displacement: (isize, isize)) {
+        println!("{:?}", displacement);
         self.head.mv(displacement)
     }
 }
