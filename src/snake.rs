@@ -36,10 +36,16 @@ pub struct Snake {
     head: SnakeHead
 }
 
-pub fn new(head_pos: (isize, isize)) -> Snake {
-    let tail = make_tail((head_pos.0-2, head_pos.1));
-    let torso = make_torso((head_pos.0-1, head_pos.1), tail);
-    let head = make_head(head_pos, torso);
+pub fn new(head_pos: (isize, isize), size: isize) -> Snake {
+    if size < 2 {
+        panic!("Snake size must be at least 2 (head and tail)");
+    }
+    let tail = make_tail((head_pos.0-(size - 1), head_pos.1));
+    let mut prev_body = tail as Box<dyn Body>;
+    for i in (1 .. (size - 1)).rev() {
+        prev_body = make_torso((head_pos.0 - i, head_pos.1), prev_body);
+    }
+    let head = make_head(head_pos, prev_body);
     Snake {head}
 }
 
@@ -71,9 +77,7 @@ trait Printable {
 }
 
 trait Body: Dragable + Printable {
-
     fn update_sprite(& mut self, update: char);
-
 }
 
 impl Movable for Snake {
@@ -156,6 +160,18 @@ impl Snake {
 
     pub fn get_pos(&self) -> (isize, isize) {
         self.head.node.pos
+    }
+
+    pub fn is_eating_self(&self) -> bool {
+        let node_pos = self.get_nodes();
+        let head_pos = node_pos[0].pos;
+        let body_pos = &node_pos[1..];  //TODO Find how to use lambdas ("any match" would be ideal here)
+        for pos in body_pos {
+            if head_pos == pos.pos {
+                return true
+            }
+        }
+        false
     }
 }
 
