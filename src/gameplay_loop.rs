@@ -4,7 +4,6 @@ use std::time::Duration;
 use crate::display_renderer::DisplayRenderer;
 use crate::snack_factory::Snack_Factory;
 use crate::Snake;
-use crate::snake::Movable;
 
 const FRAME_INTERVAL_MILIS : Duration = time::Duration::from_millis(100);
 

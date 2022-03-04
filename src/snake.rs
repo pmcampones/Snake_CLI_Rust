@@ -1,3 +1,5 @@
+use std::ptr::null;
+
 const DEFAULT_BODY : char = '-';
 const DEFAULT_HEAD : char = '>';
 
@@ -64,95 +66,11 @@ fn make_head(pos: (isize, isize), prev: Box<dyn Body>) -> SnakeHead {
     SnakeHead {node, prev}
 }
 
-pub trait Movable {
-    fn mv(&mut self, displacement: (isize, isize));
-}
-
-trait Dragable: std::fmt::Debug  {
-    fn drag(&mut self, target: (isize, isize));
-}
-
-trait Printable {
-    fn collect_node<'a>(& 'a self, vec : & mut Vec<& 'a SnakeNode>);
-}
-
-trait Body: Dragable + Printable {
-    fn update_sprite(& mut self, update: char);
-    
-}
-
-impl Movable for Snake {
-    fn mv(&mut self, displacement: (isize, isize)) {
+impl Snake {
+    pub fn mv(&mut self, displacement: (isize, isize)) {
         self.head.mv(displacement)
     }
-}
 
-impl Movable for SnakeHead {
-    fn mv(&mut self, displacement: (isize, isize)) {
-        let prev_pos = self.node.pos;
-        self.node.pos = tuple_sum(self.node.pos, displacement);
-        self.adapt_shape(displacement);
-        self.prev.drag(prev_pos);
-    }
-}
-
-impl Dragable for SnakeTorso {
-    fn drag(&mut self, target: (isize, isize)) {
-        let displacement = tuple_diff(target, self.node.pos);
-        let prev_pos = self.node.pos;
-        self.node.pos = target;
-        (self as &mut dyn Body).adapt_shape(displacement);
-        self.prev.drag(prev_pos);
-    }
-}
-
-impl Dragable for SnakeTail {
-    fn drag(&mut self, target: (isize, isize)) {
-        let displacement = tuple_diff(target, self.node.pos);
-        self.node.pos = target;
-        (self as &mut dyn Body).adapt_shape(displacement);
-    }
-}
-
-trait Polymorphic {
-    fn adapt_shape(&mut self, displacement: (isize, isize));
-}
-
-impl Polymorphic for SnakeHead {
-    fn adapt_shape(&mut self, displacement: (isize, isize)) {
-        let updated_sprite = match displacement {
-            (1,0) => RGT_HEAD,
-            (-1,0) => LFT_HEAD,
-            (0,1) => DWN_HEAD,
-            (0,-1) => UP_HEAD,
-            _ => panic!("Impossible displacement. Snake does not move in diagonal."),
-        };
-        self.node.sprite = updated_sprite;
-    }
-}
-
-impl Polymorphic for dyn Body {
-    fn adapt_shape(&mut self, displacement: (isize, isize)) {
-        let update = if displacement.0 != 0 {
-            H_BODY
-        } else if displacement.1 != 0 {
-            V_BODY
-        } else {
-            panic!("Invalid displacement")
-        };
-        self.update_sprite(update)
-    }
-}
-
-fn tuple_sum(t1: (isize, isize), t2: (isize, isize)) -> (isize, isize) {
-    (t1.0 + t2.0, t1.1 + t2.1)
-}
-
-fn tuple_diff(t1: (isize, isize), t2: (isize, isize)) -> (isize, isize) {
-    (t1.0 - t2.0, t1.1 - t2.1)
-}
-
-impl Snake {
     pub fn get_nodes(&self) -> Vec<&SnakeNode> {
         let mut ret : Vec<&SnakeNode> = Vec::new();
         self.head.collect_node(&mut ret);
@@ -174,36 +92,110 @@ impl Snake {
         body_pos.iter().any(|&x| head_pos == x.pos)
     }
 
-
+    pub fn eat_snack(&self) {
+        self.head.eat_snack();
+    }
 }
 
-impl Printable for SnakeHead {
+impl SnakeHead {
+
+    fn mv(&mut self, displacement: (isize, isize)) {
+        let prev_pos = self.node.pos;
+        self.node.pos = tuple_sum(self.node.pos, displacement);
+        self.adapt_shape(displacement);
+        self.prev.drag(prev_pos);
+    }
+
+    fn eat_snack(&self) {
+        /*if self.prev.is_tail() {
+
+        } else {
+            prev.eat_snack();
+        }*/
+    }
+
+    fn adapt_shape(&mut self, displacement: (isize, isize)) {
+        let updated_sprite = match displacement {
+            (1,0) => RGT_HEAD,
+            (-1,0) => LFT_HEAD,
+            (0,1) => DWN_HEAD,
+            (0,-1) => UP_HEAD,
+            _ => panic!("Impossible displacement. Snake does not move in diagonal."),
+        };
+        self.node.sprite = updated_sprite;
+    }
+
     fn collect_node<'a>(& 'a self, vec: & mut Vec<& 'a SnakeNode>) {
         vec.push(&self.node);
         self.prev.collect_node(vec);
     }
 }
 
-impl Printable for SnakeTorso {
-    fn collect_node<'a>(&'a self, vec: & mut Vec<& 'a SnakeNode>) {
-        vec.push(&self.node);
-        self.prev.collect_node(vec);
+trait Body: std::fmt::Debug {
+    fn update_sprite(& mut self, update: char);
+    fn is_tail(&self) -> bool;
+    fn drag(&mut self, target: (isize, isize));
+    fn collect_node<'a>(& 'a self, vec : & mut Vec<& 'a SnakeNode>);
+
+    fn adapt_shape(&mut self, displacement: (isize, isize)) {
+        let update = if displacement.0 != 0 {
+            H_BODY
+        } else if displacement.1 != 0 {
+            V_BODY
+        } else {
+            panic!("Invalid displacement")
+        };
+        self.update_sprite(update)
     }
 }
 
-impl Printable for SnakeTail {
-    fn collect_node<'a>(& 'a self, vec: &mut Vec<& 'a SnakeNode>) {
-        vec.push(&self.node);
-    }
+fn tuple_sum(t1: (isize, isize), t2: (isize, isize)) -> (isize, isize) {
+    (t1.0 + t2.0, t1.1 + t2.1)
+}
+
+fn tuple_diff(t1: (isize, isize), t2: (isize, isize)) -> (isize, isize) {
+    (t1.0 - t2.0, t1.1 - t2.1)
 }
 
 impl Body for SnakeTorso {
     fn update_sprite(& mut self, update: char) {
         self.node.sprite = update;
     }
+
+    fn is_tail(&self) -> bool {
+        false
+    }
+
+    fn drag(&mut self, target: (isize, isize)) {
+        let displacement = tuple_diff(target, self.node.pos);
+        let prev_pos = self.node.pos;
+        self.node.pos = target;
+        self.adapt_shape(displacement);
+        self.prev.drag(prev_pos);
+    }
+
+    fn collect_node<'a>(&'a self, vec: & mut Vec<& 'a SnakeNode>) {
+        vec.push(&self.node);
+        self.prev.collect_node(vec);
+    }
+
 }
 impl Body for SnakeTail {
     fn update_sprite(&mut self, update: char) {
         self.node.sprite = update;
+    }
+
+    fn is_tail(&self) -> bool {
+        true
+    }
+
+    fn drag(&mut self, target: (isize, isize)) {
+        let displacement = tuple_diff(target, self.node.pos);
+        self.node.pos = target;
+        self.adapt_shape(displacement);
+    }
+
+    fn collect_node<'a>(& 'a self, vec: &mut Vec<& 'a SnakeNode>) {
+        vec.push(&self.node);
     }
 }
