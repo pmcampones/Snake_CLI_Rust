@@ -7,13 +7,15 @@ use std::sync::mpsc::Sender;
 mod snake;
 mod display_renderer;
 mod gameplay_loop;
+mod snack_factory;
 
 fn main() {
     let (tx, rx) = mpsc::channel();
     thread::spawn(move || {detect_user_input(tx)});
     let snake: Snake = snake::new((30, 1), 20);
     let mut dr = display_renderer::new(100, 20);
-    gameplay_loop::play(snake, dr, rx);
+    let sf = snack_factory::new(100, 20);
+    gameplay_loop::play(snake, dr, rx, sf);
 }
 
 fn detect_user_input(tx: Sender<char>) -> ! {

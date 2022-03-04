@@ -78,6 +78,7 @@ trait Printable {
 
 trait Body: Dragable + Printable {
     fn update_sprite(& mut self, update: char);
+    
 }
 
 impl Movable for Snake {
@@ -120,10 +121,10 @@ trait Polymorphic {
 impl Polymorphic for SnakeHead {
     fn adapt_shape(&mut self, displacement: (isize, isize)) {
         let updated_sprite = match displacement {
-            (1,0) => '>',
-            (-1,0) => '<',
-            (0,1) => 'V',
-            (0,-1) => 'A',
+            (1,0) => RGT_HEAD,
+            (-1,0) => LFT_HEAD,
+            (0,1) => DWN_HEAD,
+            (0,-1) => UP_HEAD,
             _ => panic!("Impossible displacement. Snake does not move in diagonal."),
         };
         self.node.sprite = updated_sprite;
@@ -158,21 +159,22 @@ impl Snake {
         ret
     }
 
-    pub fn get_pos(&self) -> (isize, isize) {
+    pub fn get_pos(&self) -> Vec<&(isize,isize)> {
+        self.get_nodes().iter().map(|&x| &(x.pos)).collect::<Vec<_>>()
+    }
+
+    pub fn get_head_pos(&self) -> (isize, isize) {
         self.head.node.pos
     }
 
     pub fn is_eating_self(&self) -> bool {
         let node_pos = self.get_nodes();
         let head_pos = node_pos[0].pos;
-        let body_pos = &node_pos[1..];  //TODO Find how to use lambdas ("any match" would be ideal here)
-        for pos in body_pos {
-            if head_pos == pos.pos {
-                return true
-            }
-        }
-        false
+        let body_pos = &node_pos[1..];
+        body_pos.iter().any(|&x| head_pos == x.pos)
     }
+
+
 }
 
 impl Printable for SnakeHead {

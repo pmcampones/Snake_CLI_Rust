@@ -1,3 +1,4 @@
+use crate::snack_factory::Snack;
 use crate::snake::Snake;
 
 pub struct DisplayRenderer {
@@ -20,11 +21,17 @@ fn initialize_frame_matrix(width: usize, height: usize) -> Vec<char> {
 }
 
 impl DisplayRenderer {
-    pub fn next_frame(&mut self, snake : &Snake) {
+    pub fn next_frame(&mut self, snake : &Snake, snack : &Snack) {
         self.clear_frame();
         self.write_walls();
         self.write_snake(snake);
+        self.write_snack(snack);
         self.print_frame();
+    }
+
+    fn write_snack(&mut self, snack: &Snack) {
+        let pos = (snack.get_pos().0 as usize, snack.get_pos().1 as usize);
+        self.frame[pos.1 * self.width + pos.0] = snack.get_sprite();
     }
 
     fn print_frame(&self) {

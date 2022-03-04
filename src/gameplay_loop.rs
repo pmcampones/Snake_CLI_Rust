@@ -2,6 +2,7 @@ use std::{thread, time, process::Command, io};
 use std::sync::mpsc::{Receiver, TryRecvError};
 use std::time::Duration;
 use crate::display_renderer::DisplayRenderer;
+use crate::snack_factory::Snack_Factory;
 use crate::Snake;
 use crate::snake::Movable;
 
@@ -17,18 +18,19 @@ const RGT_IN : char = 'd';
 const UP_IN  : char = 'w';
 const DWN_IN : char = 's';
 
-pub(crate) fn play(mut snake : Snake, mut renderer: DisplayRenderer, rx : Receiver<char>) {
+pub(crate) fn play(mut snake : Snake, mut renderer: DisplayRenderer, rx : Receiver<char>, sf : Snack_Factory) {
+    let mut snack = sf.make_snack(&snake.get_pos());
     let mut prev_displacement = (1, 0);
     loop {
         //Command::new("clear").spawn().unwrap();
         let displacement = compute_displacement(&rx, &mut prev_displacement);
-        if !renderer.is_in_wall(snake.get_pos()) {
+        if !renderer.is_in_wall(snake.get_head_pos()) {
             panic!("Stop hitting the wall asshole!!")
         } else if snake.is_eating_self() {
             panic!("Eating yourself?... Kinky ;)")
         }
         snake.mv(displacement);
-        renderer.next_frame(&snake);
+        renderer.next_frame(&snake, &snack);
         thread::sleep(FRAME_INTERVAL_MILIS);
         prev_displacement = displacement;
     }
