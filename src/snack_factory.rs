@@ -19,8 +19,8 @@ impl Snack_Factory {
 
     pub(crate) fn make_snack(&self, used : &Vec<&(isize, isize)>) -> Snack {
         let mut rng = thread_rng();
-        let mut pos = (rng.gen_range(1.. self.width) as isize,
-                       rng.gen_range(1.. self.height) as isize);
+        let mut pos = (rng.gen_range(2.. self.width - 1) as isize,
+                       rng.gen_range(2.. self.height - 1) as isize);
         while used.iter().any(|&x| pos == *x) {
             pos = (rng.gen_range(1.. self.width) as isize, rng.gen_range(1.. self.height) as isize);
         }
