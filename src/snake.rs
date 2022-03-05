@@ -1,3 +1,4 @@
+use std::mem;
 use std::ptr::null;
 
 const DEFAULT_BODY : char = '-';
@@ -6,10 +7,15 @@ const DEFAULT_HEAD : char = '>';
 const H_BODY : char = '-';
 const V_BODY : char = '|';
 
-const UP_HEAD  : char = 'A';
-const DWN_HEAD : char = 'V';
 const LFT_HEAD : char = '<';
 const RGT_HEAD : char = '>';
+const UP_HEAD  : char = 'A';
+const DWN_HEAD : char = 'V';
+
+const LFT_MV : (isize, isize) = (-1, 0);
+const RGT_MV : (isize, isize) = (1, 0);
+const UP_MV  : (isize, isize) = (0, -1);
+const DWN_MV : (isize, isize) = (0, 1);
 
 #[derive(Debug)]
 pub struct SnakeNode {
@@ -18,55 +24,46 @@ pub struct SnakeNode {
 }
 
 #[derive(Debug)]
+struct SnakeBody {
+    node: SnakeNode,
+    prev: Option<Box<SnakeBody>>
+}
+
+#[derive(Debug)]
 struct SnakeHead {
     node: SnakeNode,
-    prev: Box<dyn Body>
+    prev: Option<Box<SnakeBody>>
 }
 
-#[derive(Debug)]
-struct SnakeTorso {
-    node: SnakeNode,
-    prev: Box<dyn Body>
-}
-
-#[derive(Debug)]
-struct SnakeTail {
-    node: SnakeNode
-}
 #[derive(Debug)]
 pub struct Snake {
     head: SnakeHead
 }
 
 pub fn new(head_pos: (isize, isize), size: isize) -> Snake {
-    if size < 2 {
-        panic!("Snake size must be at least 2 (head and tail)");
+    if size < 1 {
+        panic!("Snake size must be at least 1 (head)");
     }
-    let tail = make_tail((head_pos.0-(size - 1), head_pos.1));
-    let mut prev_body = tail as Box<dyn Body>;
-    for i in (1 .. (size - 1)).rev() {
-        prev_body = make_torso((head_pos.0 - i, head_pos.1), prev_body);
+    let mut prev : Option<Box<SnakeBody>> = None;
+    for i in (1 .. size).rev() {
+        prev = Some(make_body_part((head_pos.0 - i, head_pos.1), prev));
     }
-    let head = make_head(head_pos, prev_body);
-    Snake {head}
+    let head = make_head(head_pos, prev);
+    Snake{head}
 }
 
-fn make_tail(pos: (isize, isize)) -> Box<SnakeTail> {
+fn make_body_part(pos: (isize, isize), prev: Option<Box<SnakeBody>>) -> Box<SnakeBody> {
     let node = SnakeNode {pos, sprite: DEFAULT_BODY};
-    Box::new(SnakeTail {node})
+    Box::new(SnakeBody {node, prev})
 }
 
-fn make_torso(pos: (isize, isize), prev: Box<dyn Body>) -> Box<SnakeTorso> {
-    let node = SnakeNode {pos, sprite: DEFAULT_BODY};
-    Box::new(SnakeTorso {node, prev})
-}
-
-fn make_head(pos: (isize, isize), prev: Box<dyn Body>) -> SnakeHead {
+fn make_head(pos: (isize, isize), prev: Option<Box<SnakeBody>>) -> SnakeHead {
     let node = SnakeNode {pos, sprite: DEFAULT_HEAD};
     SnakeHead {node, prev}
 }
 
 impl Snake {
+
     pub fn mv(&mut self, displacement: (isize, isize)) {
         self.head.mv(displacement)
     }
@@ -92,7 +89,7 @@ impl Snake {
         body_pos.iter().any(|&x| head_pos == x.pos)
     }
 
-    pub fn eat_snack(&self) {
+    pub fn eat_snack(&mut self) {
         self.head.eat_snack();
     }
 }
@@ -100,26 +97,30 @@ impl Snake {
 impl SnakeHead {
 
     fn mv(&mut self, displacement: (isize, isize)) {
-        let prev_pos = self.node.pos;
-        self.node.pos = tuple_sum(self.node.pos, displacement);
         self.adapt_shape(displacement);
-        self.prev.drag(prev_pos);
+        if let  Some(p) = &mut self.prev {
+            p.drag(self.node.pos);
+        }
+        self.node.pos = tuple_sum(self.node.pos, displacement);
     }
 
-    fn eat_snack(&self) {
+    fn eat_snack(&mut self) {
         /*if self.prev.is_tail() {
-
+            let new_node = SnakeNode{pos : *self.prev.get_pos(), sprite : self.prev.get_sprite()};
+            let mut extended_body = Box::new(SnakeTorso{ node: new_node, prev:  });
+            let tail = mem::replace(&mut self.prev, extended_body as Box<dyn Body>);
+            mem::replace(&mut extended_body.prev, tail);
         } else {
-            prev.eat_snack();
+            //self.prev.eat_snack();
         }*/
     }
 
     fn adapt_shape(&mut self, displacement: (isize, isize)) {
         let updated_sprite = match displacement {
-            (1,0) => RGT_HEAD,
-            (-1,0) => LFT_HEAD,
-            (0,1) => DWN_HEAD,
-            (0,-1) => UP_HEAD,
+            LFT_MV => LFT_HEAD,
+            RGT_MV => RGT_HEAD,
+            UP_MV => UP_HEAD,
+            DWN_MV => DWN_HEAD,
             _ => panic!("Impossible displacement. Snake does not move in diagonal."),
         };
         self.node.sprite = updated_sprite;
@@ -127,26 +128,50 @@ impl SnakeHead {
 
     fn collect_node<'a>(& 'a self, vec: & mut Vec<& 'a SnakeNode>) {
         vec.push(&self.node);
-        self.prev.collect_node(vec);
+        if let Some(p) = &self.prev {
+            p.collect_node(vec);
+        }
     }
 }
 
-trait Body: std::fmt::Debug {
-    fn update_sprite(& mut self, update: char);
-    fn is_tail(&self) -> bool;
-    fn drag(&mut self, target: (isize, isize));
-    fn collect_node<'a>(& 'a self, vec : & mut Vec<& 'a SnakeNode>);
+impl SnakeBody {
+
+    fn update_sprite(& mut self, update: char) {
+        self.node.sprite = update;
+    }
+
+    fn drag(&mut self, target: (isize, isize)) {
+        let displacement = tuple_diff(target, self.node.pos);
+        self.adapt_shape(displacement);
+        if let Some(p) = &mut self.prev {
+            p.drag(self.node.pos);
+        }
+        self.node.pos = target;
+    }
+
+    fn collect_node<'a>(&'a self, vec: & mut Vec<& 'a SnakeNode>) {
+        vec.push(&self.node);
+        if let Some(p) = &self.prev {
+            p.collect_node(vec);
+        }
+    }
+
+    fn get_pos(&self) -> &(isize, isize) {
+        &self.node.pos
+    }
+
+    fn get_sprite(&self) -> char {
+        self.node.sprite
+    }
 
     fn adapt_shape(&mut self, displacement: (isize, isize)) {
-        let update = if displacement.0 != 0 {
-            H_BODY
+        if displacement.0 != 0 {
+            self.update_sprite(H_BODY);
         } else if displacement.1 != 0 {
-            V_BODY
-        } else {
-            panic!("Invalid displacement")
-        };
-        self.update_sprite(update)
+            self.update_sprite(V_BODY);
+        }
     }
+
 }
 
 fn tuple_sum(t1: (isize, isize), t2: (isize, isize)) -> (isize, isize) {
@@ -155,47 +180,4 @@ fn tuple_sum(t1: (isize, isize), t2: (isize, isize)) -> (isize, isize) {
 
 fn tuple_diff(t1: (isize, isize), t2: (isize, isize)) -> (isize, isize) {
     (t1.0 - t2.0, t1.1 - t2.1)
-}
-
-impl Body for SnakeTorso {
-    fn update_sprite(& mut self, update: char) {
-        self.node.sprite = update;
-    }
-
-    fn is_tail(&self) -> bool {
-        false
-    }
-
-    fn drag(&mut self, target: (isize, isize)) {
-        let displacement = tuple_diff(target, self.node.pos);
-        let prev_pos = self.node.pos;
-        self.node.pos = target;
-        self.adapt_shape(displacement);
-        self.prev.drag(prev_pos);
-    }
-
-    fn collect_node<'a>(&'a self, vec: & mut Vec<& 'a SnakeNode>) {
-        vec.push(&self.node);
-        self.prev.collect_node(vec);
-    }
-
-}
-impl Body for SnakeTail {
-    fn update_sprite(&mut self, update: char) {
-        self.node.sprite = update;
-    }
-
-    fn is_tail(&self) -> bool {
-        true
-    }
-
-    fn drag(&mut self, target: (isize, isize)) {
-        let displacement = tuple_diff(target, self.node.pos);
-        self.node.pos = target;
-        self.adapt_shape(displacement);
-    }
-
-    fn collect_node<'a>(& 'a self, vec: &mut Vec<& 'a SnakeNode>) {
-        vec.push(&self.node);
-    }
 }
