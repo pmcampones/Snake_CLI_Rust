@@ -23,15 +23,25 @@ pub(crate) fn play(mut snake : Snake, mut renderer: DisplayRenderer, rx : Receiv
     loop {
         //Command::new("clear").spawn().unwrap();
         let displacement = compute_displacement(&rx, &mut prev_displacement);
-        if !renderer.is_in_wall(snake.get_head_pos()) {
-            panic!("Stop hitting the wall asshole!!")
-        } else if snake.is_eating_self() {
-            panic!("Eating yourself?... Kinky ;)")
-        }
+        collisions_check(&mut snake, &mut renderer);
         snake.mv(displacement);
         renderer.next_frame(&snake, &snack);
+
+        if snake.can_eat(&snack) {
+            snake.eat_snack();
+            snack = sf.make_snack(&snake.get_pos());
+        }
+
         thread::sleep(FRAME_INTERVAL_MILIS);
         prev_displacement = displacement;
+    }
+}
+
+fn collisions_check(snake: &mut Snake, renderer: &mut DisplayRenderer) {
+    if !renderer.is_in_wall(snake.get_head_pos()) {
+        panic!("Stop hitting the wall asshole!!")
+    } else if snake.is_eating_self() {
+        panic!("Eating yourself?... Kinky ;)")
     }
 }
 

@@ -1,5 +1,6 @@
 use std::mem;
 use std::ptr::null;
+use crate::snack_factory::Snack;
 
 const DEFAULT_BODY : char = '-';
 const DEFAULT_HEAD : char = '>';
@@ -26,13 +27,15 @@ pub struct SnakeNode {
 #[derive(Debug)]
 struct SnakeBody {
     node: SnakeNode,
-    prev: Option<Box<SnakeBody>>
+    prev: Option<Box<SnakeBody>>,
+    is_digesting: bool
 }
 
 #[derive(Debug)]
 struct SnakeHead {
     node: SnakeNode,
-    prev: Option<Box<SnakeBody>>
+    prev: Option<Box<SnakeBody>>,
+    is_digesting: bool
 }
 
 #[derive(Debug)]
@@ -54,12 +57,12 @@ pub fn new(head_pos: (isize, isize), size: isize) -> Snake {
 
 fn make_body_part(pos: (isize, isize), prev: Option<Box<SnakeBody>>) -> Box<SnakeBody> {
     let node = SnakeNode {pos, sprite: DEFAULT_BODY};
-    Box::new(SnakeBody {node, prev})
+    Box::new(SnakeBody {node, prev, is_digesting: false})
 }
 
 fn make_head(pos: (isize, isize), prev: Option<Box<SnakeBody>>) -> SnakeHead {
     let node = SnakeNode {pos, sprite: DEFAULT_HEAD};
-    SnakeHead {node, prev}
+    SnakeHead {node, prev, is_digesting: false}
 }
 
 impl Snake {
@@ -89,6 +92,10 @@ impl Snake {
         body_pos.iter().any(|&x| head_pos == x.pos)
     }
 
+    pub fn can_eat(&self, snack: &Snack) -> bool {
+        self.head.node.pos == *snack.get_pos()
+    }
+
     pub fn eat_snack(&mut self) {
         self.head.eat_snack();
     }
@@ -97,22 +104,28 @@ impl Snake {
 impl SnakeHead {
 
     fn mv(&mut self, displacement: (isize, isize)) {
-        self.adapt_shape(displacement);
-        if let  Some(p) = &mut self.prev {
-            p.drag(self.node.pos);
+        match &mut self.prev {
+            Some(p) => {
+                p.drag(self.node.pos);
+                if self.is_digesting {
+                    p.eat_snack();
+                }
+            },
+            None => {
+                if self.is_digesting {
+                    let node = SnakeNode {pos : self.node.pos, sprite: self.node.sprite};
+                    let tail = Box::new(SnakeBody {node, prev: None, is_digesting: false});
+                    self.prev = Some(tail);
+                }
+            }
         }
+        self.adapt_shape(displacement);
         self.node.pos = tuple_sum(self.node.pos, displacement);
+        self.is_digesting = false;
     }
 
     fn eat_snack(&mut self) {
-        /*if self.prev.is_tail() {
-            let new_node = SnakeNode{pos : *self.prev.get_pos(), sprite : self.prev.get_sprite()};
-            let mut extended_body = Box::new(SnakeTorso{ node: new_node, prev:  });
-            let tail = mem::replace(&mut self.prev, extended_body as Box<dyn Body>);
-            mem::replace(&mut extended_body.prev, tail);
-        } else {
-            //self.prev.eat_snack();
-        }*/
+        self.is_digesting = true;
     }
 
     fn adapt_shape(&mut self, displacement: (isize, isize)) {
@@ -140,13 +153,30 @@ impl SnakeBody {
         self.node.sprite = update;
     }
 
+    fn eat_snack(&mut self) {
+        self.is_digesting = true;
+    }
+
     fn drag(&mut self, target: (isize, isize)) {
+        match &mut self.prev {
+            Some(p) => {
+                p.drag(self.node.pos);
+                if self.is_digesting {
+                    p.eat_snack();
+                }
+            },
+            None => {
+                if self.is_digesting {
+                    let node = SnakeNode {pos : self.node.pos, sprite: self.node.sprite};
+                    let tail = Box::new(SnakeBody {node, prev: None, is_digesting: false});
+                    self.prev = Some(tail);
+                }
+            }
+        }
         let displacement = tuple_diff(target, self.node.pos);
         self.adapt_shape(displacement);
-        if let Some(p) = &mut self.prev {
-            p.drag(self.node.pos);
-        }
         self.node.pos = target;
+        self.is_digesting = false;
     }
 
     fn collect_node<'a>(&'a self, vec: & mut Vec<& 'a SnakeNode>) {
