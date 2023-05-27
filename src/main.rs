@@ -18,6 +18,7 @@ fn main() {
     let snake: Snake = snake::new((30, 1), 3);
     let mut dr = display_renderer::new(WIDTH, HEIGHT);
     let sf = snack_factory::new(WIDTH, HEIGHT);
+    print!("{esc}c", esc = 27 as char);
     gameplay_loop::play(snake, dr, rx, sf);
 }
 
