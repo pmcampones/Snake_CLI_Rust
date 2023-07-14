@@ -22,6 +22,7 @@ pub(crate) fn play(mut snake : Snake, mut renderer: DisplayRenderer, rx : Receiv
     let mut prev_displacement = (1, 0);
     loop {
         //Command::new("clear").spawn().unwrap();
+        print!("{esc}[1;1H", esc = 27 as char);
         let displacement = compute_displacement(&rx, &mut prev_displacement);
         collisions_check(&mut snake, &mut renderer);
         snake.mv(displacement);
